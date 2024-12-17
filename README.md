@@ -1,8 +1,7 @@
-# Mac-Pi-Display
+# MacPi-Mirror
 
 ### **1. Overview**
 
-The project uses:
 - **Mac**: Captures a portion of the screen and sends it to the Raspberry Pi over a network.
 - **Raspberry Pi**: Receives the data, processes it, and displays it on an ST7789 LCD.
 
