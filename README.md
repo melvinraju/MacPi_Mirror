@@ -63,14 +63,11 @@ The scripts use the **Pillow**, **mss**, and **sockets** libraries for capturing
    - The repo contains a folder called `lib`, this contains Waveshare's display library and is referenced in the `screen_stream.py` script. Ensure the lib folder is present next to the `screen_stream.py` script before running.
    - In the `screen_stream.py` script, `from lib import LCD_1inch54` points towards the 1.54 inch display library, this can be changed to another display size. Look for whats available in the `lib` folder and replace the `LCD_1inch54` value.
 
-5. **Save the Receiver Script**:
-   Create a new file called `screen_stream.py`:
-   ```bash
-   screen_stream.py
-   ```
-   Paste the receiver script from above and save it.
+5. **Save the Receiver Script and Screen Libraries**:
+   - Save the script called `screen_stream.py` and folder `lib` in a folder in your desired location. Note down the file path.
 
 6. **Make the Script Executable**:
+   Locate the script location in terminal and make the script executable:
    ```bash
    chmod +x screen_stream.py
    ```
@@ -90,13 +87,10 @@ The scripts use the **Pillow**, **mss**, and **sockets** libraries for capturing
    ```
 
 3. **Save the Sender Script**:
-   Create a new file called `screen_capture.py`:
-   ```bash
-   screen_capture.py
-   ```
-   Paste the sender script from above and save it.
+   - Save the script called `screen_capture.py` in a folder in your desired location. Note down the file path.
 
-4. **Make the Script Executable**:
+5. **Make the Script Executable**:
+   Locate the script location in terminal and make the script executable:
    ```bash
    chmod +x screen_capture.py
    ```
