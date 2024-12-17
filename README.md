@@ -1,4 +1,4 @@
-# MacPi-Mirror
+# MacPi Mirror
 
 ### **1. Overview**
 
