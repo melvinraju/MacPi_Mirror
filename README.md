@@ -52,8 +52,6 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
    ```
 
 3. **Manufacturer’s Display Library**:
-
-
    - The repo contains a folder called `lib`, this contains Waveshare's display library and is referenced in the `screen_stream.py` script. Ensure the lib folder is present next to the `screen_stream.py` script before running.
    - In the `screen_stream.py` script, `from lib import LCD_1inch54` points towards the 1.54 inch display library, this can be changed to another display size. Look for whats available in the `lib` folder and replace the `LCD_1inch54` value.
 
@@ -105,7 +103,7 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
    ```bash
    sudo python3 screen_stream.py
    ```
-   The screen will turn white whilst it waits for data
+   The screen will say "Waitng for connection..." if successful
 
 #### Step 2: Start the Sender on the Mac
 1. Open a terminal on the Mac.
@@ -122,7 +120,6 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
    - `quality` adjust the image quality (0-100)
    - `rotation` defines the rotation the image is displayed (`0`,`90`,`180`,`270`)
 
-#### Step 3: Observe the Output
 The selected portion of the Mac’s screen will be mirrored on the Pi’s LCD.
 
 ---
