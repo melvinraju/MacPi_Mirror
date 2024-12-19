@@ -2,8 +2,6 @@
 
 Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry Pi. The Raspberry Pi receives the data and displays it on a LCD.
 
-### **Prerequisites**
-
 - **Hardware**:
   - Raspberry Pi (any model with GPIO and networking capabilities).
   - ST7789 LCD (1.54" 240x240 is used in this demo).
@@ -17,7 +15,7 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
 ---
 
 
-### **1. Hardware Setup**
+### **1. Hardware Setup (10 mins)** 
 
 1. **Connect the ST7789 LCD to the Raspberry Pi**:
    Use the following GPIO pins:
@@ -38,7 +36,7 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
 ---
 
 
-### **2. Software Setup**
+### **2. Software Setup (10 mins)**
 
 #### **On the Raspberry Pi**
 1. **Update the System**:
@@ -94,7 +92,7 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
 ---
 
 
-### **3. Running the Scripts**
+### **3. Running the Scripts (2 mins)**
 
 #### Step 1: Start the Receiver on the Raspberry Pi
 1. Open a terminal on the Pi.
@@ -117,12 +115,12 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
    ```
    Configuration:
    - Replace the host ip address with your Raspberry Pi’s IP address
-   - `rotation` defines the rotation the image is displayed (`0`,`90`,`180`,`270`)
    - `top` and `left` define the origin of the capture region in pixels
    - `width` and `height` define the size of the capture region in pixels. 2px added for margin.
    - `target-width` and `target-height` is the size of the LCD in pixels
    - `timesleep` adjusts the refresh rate (lower is higher refresh rate)
    - `quality` adjust the image quality (0-100)
+   - `rotation` defines the rotation the image is displayed (`0`,`90`,`180`,`270`)
 
 #### Step 3: Observe the Output
 The selected portion of the Mac’s screen will be mirrored on the Pi’s LCD.
