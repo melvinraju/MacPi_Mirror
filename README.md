@@ -116,10 +116,11 @@ The scripts use the **Pillow**, **mss**, and **sockets** libraries for capturing
 1. Open a terminal on the Mac.
 2. Run the sender script:
    ```bash
-   python3 screen_capture.py --host 192.168.86.49 --top 114 --left 340 --width 242 --height 242 --timesleep 0.03 --quality 60
+   python3 screen_capture.py --host 192.168.86.49 --rotation 90 --top 114 --left 340 --width 242 --height 242 --timesleep 0.03 --quality 60
    ```
    Note:
    - Replace the host ip address with your Raspberry Pi’s IP address
+   - `rotation` defines the rotation the image is displayed (`0`,`90`,`180`,`270`)
    - `top` and `left` define the origin of the capture region in pixels
    - `width` and `height` define the size of the capture region in pixels. 2px added for margin.
    - `timesleep` adjusts the refresh rate (lower is higher refresh rate)
