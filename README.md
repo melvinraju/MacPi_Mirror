@@ -1,15 +1,8 @@
 # MacPi Mirror
 
-### **1. Overview**
+Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry Pi. The Raspberry Pi receives the data and displays it on a LCD.
 
-- **Mac**: Captures a portion of the screen and sends it to the Raspberry Pi over a network.
-- **Raspberry Pi**: Receives the data, processes it, and displays it on an ST7789 LCD.
-
-The scripts use the **Pillow**, **mss**, and **sockets** libraries for capturing, compressing, and transmitting images.
-
----
-
-### **2. Prerequisites**
+### **Prerequisites**
 
 - **Hardware**:
   - Raspberry Pi (any model with GPIO and networking capabilities).
@@ -19,10 +12,12 @@ The scripts use the **Pillow**, **mss**, and **sockets** libraries for capturing
 - **Software**:
   - Raspberry Pi OS (Raspbian) with Python 3 installed.
   - macOS with Python 3 installed.
+  - The scripts use the **Pillow**, **mss**, and **sockets** libraries for capturing, compressing, and transmitting images.
 
 ---
 
-### **3. Hardware Setup**
+
+### **1. Hardware Setup**
 
 1. **Connect the ST7789 LCD to the Raspberry Pi**:
    Use the following GPIO pins:
@@ -42,7 +37,8 @@ The scripts use the **Pillow**, **mss**, and **sockets** libraries for capturing
 
 ---
 
-### **4. Software Setup**
+
+### **2. Software Setup**
 
 #### **On the Raspberry Pi**
 1. **Update the System**:
@@ -72,7 +68,7 @@ The scripts use the **Pillow**, **mss**, and **sockets** libraries for capturing
    chmod +x screen_stream.py
    ```
 
----
+
 
 #### **On the Mac**
 1. **Install Python 3**:
@@ -97,7 +93,8 @@ The scripts use the **Pillow**, **mss**, and **sockets** libraries for capturing
 
 ---
 
-### **5. Running the Scripts**
+
+### **3. Running the Scripts**
 
 #### Step 1: Start the Receiver on the Raspberry Pi
 1. Open a terminal on the Pi.
@@ -116,13 +113,14 @@ The scripts use the **Pillow**, **mss**, and **sockets** libraries for capturing
 1. Open a terminal on the Mac.
 2. Run the sender script:
    ```bash
-   python3 screen_capture.py --host 192.168.86.49 --rotation 90 --top 114 --left 340 --width 242 --height 242 --timesleep 0.03 --quality 60
+   python3 screen_capture.py --host 192.168.86.49 --top 100 --left 1480 --width 242 --height 242 --target-width 240 --target-height 240 --timesleep 0.05 --quality 80 --rotation 90
    ```
-   Note:
+   Configuration:
    - Replace the host ip address with your Raspberry Pi’s IP address
    - `rotation` defines the rotation the image is displayed (`0`,`90`,`180`,`270`)
    - `top` and `left` define the origin of the capture region in pixels
    - `width` and `height` define the size of the capture region in pixels. 2px added for margin.
+   - `target-width` and `target-height` is the size of the LCD in pixels
    - `timesleep` adjusts the refresh rate (lower is higher refresh rate)
    - `quality` adjust the image quality (0-100)
 
@@ -131,7 +129,7 @@ The selected portion of the Mac’s screen will be mirrored on the Pi’s LCD.
 
 ---
 
-### **6. Troubleshooting**
+### **Troubleshooting**
 
 1. **Screen Not Updating**:
    - Ensure both scripts are running and connected.
@@ -151,19 +149,6 @@ The selected portion of the Mac’s screen will be mirrored on the Pi’s LCD.
 4. **Libraries Not Found**:
    - Reinstall the missing libraries using `pip3`.
 
----
 
-### **7. Optimizations**
 
-1. **Resolution**:
-   - Adjust the capture region in the Mac script for a smaller area.
 
-2. **Frame Rate**:
-   - Adjust `time.sleep` in the Mac script to improve refresh rates.
-
-3. **Compression**:
-   - Modify the JPEG quality in the Mac script for faster transmission.
-
----
-
-This setup allows you to mirror a portion of your Mac’s screen to a Raspberry Pi with a 240x240 ST7789 display. Let me know if you need additional details or have any issues!
