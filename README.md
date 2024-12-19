@@ -68,10 +68,10 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
 
 #### **On the Mac**
 1. **Install Python 3**:
-   - macOS includes Python 3, but ensure it’s the latest version. Install it using [Homebrew](https://brew.sh) if necessary:
-     ```bash
-     brew install python
-     ```
+   macOS includes Python 3, but ensure it’s the latest version. Install it using [Homebrew](https://brew.sh) if necessary:
+   ```bash
+   brew install python
+   ```
 
 2. **Install Required Libraries**:
    ```bash
