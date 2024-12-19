@@ -1,6 +1,6 @@
 # MacPi Mirror
 
-Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry Pi. The Raspberry Pi receives the data and displays it on a LCD.
+MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspberry Pi receives the data and displays it on a LCD.
 
 - **Hardware**:
   - Raspberry Pi (any model with GPIO and networking capabilities).
@@ -17,8 +17,9 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
 
 ### **1. Hardware Setup (10 mins)** 
 
-1. **Connect the ST7789 LCD to the Raspberry Pi**:
-   Use the following GPIO pins:
+1. **Connect the LCD to the Raspberry Pi**:
+   <details>
+    <summary>ST7789 LCD 1.54" display pins</summary>
 
    | LCD Pin   | Raspberry Pi Pin |
    |-----------|------------------|
@@ -30,6 +31,8 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
    | DS/DC     | GPIO 25          |
    | RST       | GPIO 27          |
    | BL        | GPIO 18          |
+  
+   </details>
 
 2. Power up the Raspberry Pi and ensure it is connected to the same network as the Mac.
 
@@ -93,8 +96,8 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
 ### **3. Running the Scripts (2 mins)**
 
 #### Step 1: Start the Receiver on the Raspberry Pi
-1. Open a terminal on the Pi.
-2. Run the receiver script:
+1. Open a terminal on the Pi and navigate to the location of the `screen_stream.py` script.
+2. Run the script:
    ```bash
    python3 screen_stream.py
    ```
@@ -106,8 +109,8 @@ Macpi Mirror captures a portion of your Mac screen and sends it to a Raspberry P
    The screen will say "Waitng for connection..." if successful
 
 #### Step 2: Start the Sender on the Mac
-1. Open a terminal on the Mac.
-2. Run the sender script:
+1. Open a terminal on the Mac and navigate to the location of the `screen_capture.py` script.
+2. Run the script:
    ```bash
    python3 screen_capture.py --host 192.168.86.49 --top 100 --left 1480 --width 242 --height 242 --target-width 240 --target-height 240 --timesleep 0.05 --quality 80 --rotation 90
    ```
