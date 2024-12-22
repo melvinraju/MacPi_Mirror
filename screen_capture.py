@@ -5,50 +5,52 @@ from mss import mss
 from PIL import Image
 from io import BytesIO
 
-# Function to send an image and rotation metadata
-def send_image(client, image, quality, rotation, target_width, target_height):
-    """Resize and send an image along with rotation metadata to the Pi over the socket."""
-    # Resize the image to the target dimensions
-    resized_image = image.resize((target_width, target_height))
 
+def send_image(client, image, quality, rotation, target_width, target_height):
+    """Resize, rotate, and send an image to the Pi over the socket."""
+    # Resize and rotate in one step
+    image = image.resize((target_width, target_height), Image.LANCZOS).rotate(rotation)
+
+    # Optimize JPEG compression
     buffer = BytesIO()
-    resized_image.save(buffer, format="JPEG", quality=quality)
+    image.save(buffer, format="JPEG", quality=quality, optimize=True, subsampling=0)
     buffer.seek(0)
 
     # Get the image size
     image_data = buffer.read()
     image_size = len(image_data)
 
-    # Send the rotation (4 bytes) and size (8 bytes)
-    client.sendall(rotation.to_bytes(4, byteorder="big"))
+    # Send the image size (8 bytes)
     client.sendall(image_size.to_bytes(8, byteorder="big"))
 
-    # Send the image data
+    # Send the image data in one batch
     client.sendall(image_data)
 
-# Main script
+
 def main(host, port, region, timesleep, quality, rotation, target_width, target_height):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
+            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # Disable Nagle’s algorithm for low latency
             client.connect((host, port))
             print(f"Connected to {host}:{port}")
 
             with mss() as sct:
                 while True:
-                    # Capture the screen
+                    # Capture the screen and convert to PIL Image
                     screenshot = sct.grab(region)
                     image = Image.frombytes("RGB", screenshot.size, screenshot.rgb)
 
                     # Send the image to the Pi
                     try:
                         send_image(client, image, quality, rotation, target_width, target_height)
-                    except BrokenPipeError:
+                    except (BrokenPipeError, ConnectionResetError):
                         print("Connection lost. Exiting...")
                         break
 
                     time.sleep(timesleep)  # Adjust for refresh rate
     except ConnectionRefusedError:
         print(f"Could not connect to {host}:{port}")
+
 
 # Command-line argument parser
 if __name__ == "__main__":
