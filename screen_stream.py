@@ -1,36 +1,30 @@
 import socket
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 from lib import LCD_1inch54  # Adjust for your library
 
-# Initialize the display
+# Initialize the display and set backlight to 100%
 disp = LCD_1inch54.LCD_1inch54()
 disp.Init()
 disp.clear()
-disp.bl_DutyCycle(100)  # Set backlight to 90 and keep constant
+disp.bl_DutyCycle(100)  # Backlight at 100%
 
-# Network configuration
+
 HOST = "0.0.0.0"  # Listen on all interfaces
 PORT = 5000       # Port for incoming data
 
+
 def receive_image(conn):
-    """Receive an image and rotation metadata over the socket connection."""
+    """Receive an image over the socket connection."""
     try:
-        # Receive the rotation (4 bytes) and image size (8 bytes)
-        rotation_data = conn.recv(4)
-        if not rotation_data or len(rotation_data) < 4:
-            print("Error: Failed to receive rotation. Client may have disconnected.")
-            return None, None, False
-
-        rotation = int.from_bytes(rotation_data, byteorder="big")
-
+        # Receive the image size (8 bytes)
         size_data = conn.recv(8)
         if not size_data or len(size_data) < 8:
-            print("Error: Failed to receive image size. Client may have disconnected.")
-            return None, None, False
+            print("No data received. Client may have disconnected.")
+            return None, False
 
         image_size = int.from_bytes(size_data, byteorder="big")
-        print(f"Expecting image of size: {image_size} bytes with rotation: {rotation} degrees.")
+        print(f"Expecting image of size: {image_size} bytes.")
 
         # Receive the image data in chunks
         received_data = b""
@@ -38,41 +32,48 @@ def receive_image(conn):
             chunk = conn.recv(min(4096, image_size - len(received_data)))
             if not chunk:
                 print("Connection lost while receiving image data.")
-                return None, None, False
+                return None, False
             received_data += chunk
 
+        # Handle incomplete data
         if len(received_data) != image_size:
             print(f"Error: Expected {image_size} bytes, but received {len(received_data)} bytes. Skipping frame.")
-            return None, None, True  # Skip frame but keep the connection alive
+            return None, True  # Keep connection alive but skip this frame
 
-        return received_data, rotation, True
+        return received_data, True
     except Exception as e:
         print(f"Exception during receive_image: {e}")
-        return None, None, False
+        return None, False
+
 
 def display_waiting_message():
-    """Display 'Waiting for connection...' message on the screen."""
-    from PIL import ImageDraw, ImageFont
+    """Display 'Waiting for connection...' message with a default font."""
     image = Image.new("RGB", (disp.width, disp.height), "BLACK")
     draw = ImageDraw.Draw(image)
 
-    try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
-    except IOError:
-        font = ImageFont.load_default()  # Fallback to default if custom font is unavailable
-
+    # Always use the default Pillow font (guaranteed to be available)
+    font = ImageFont.load_default()
     message = "Waiting for\nconnection..."
+
+    # Center the text using bounding box
     bbox = draw.multiline_textbbox((0, 0), message, font=font)
     w = bbox[2] - bbox[0]
     h = bbox[3] - bbox[1]
-    draw.multiline_text(((disp.width - w) // 2, (disp.height - h) // 2), message, fill="WHITE", font=font, align="center")
+
+    draw.multiline_text(
+        ((disp.width - w) // 2, (disp.height - h) // 2),
+        message,
+        fill="WHITE",
+        font=font,
+        align="center",
+    )
 
     disp.ShowImage(image)
+
 
 # Start the server
 while True:
     try:
-        # Display waiting message
         display_waiting_message()
         print("Waiting for connection...")
 
@@ -86,24 +87,20 @@ while True:
 
             with conn:
                 while True:
-                    # Attempt to receive and process an image
-                    image_data, rotation, keep_alive = receive_image(conn)
+                    image_data, keep_alive = receive_image(conn)
                     if not keep_alive:
                         print("Client disconnected.")
-                        break  # Exit to wait for a new connection
+                        break
 
                     if image_data is None:
-                        print("Skipped a frame. Continuing...")
-                        continue
+                        continue  # Skip to next frame if the current one is incomplete
 
-                    # Process and display the valid image
+                    # Display the received image
                     try:
                         image = Image.open(BytesIO(image_data))
-                        rotated_image = image.rotate(rotation)
-                        disp.ShowImage(rotated_image)
+                        disp.ShowImage(image)
                     except Exception as e:
-                        print(f"Error processing image: {e}")
+                        print(f"Error displaying image: {e}")
                         continue
-
     except Exception as e:
         print(f"Server error: {e}")
