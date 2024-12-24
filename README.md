@@ -42,13 +42,11 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 ### **2. Software Setup (10 mins)**
 
 #### **On the Raspberry Pi**
-1. **Update the System**:
-   ```bash
-   sudo apt update
-   sudo apt upgrade
-   ```
+1. **Raspberry Pi Name**:
 
-2. **Enable & Install Required Libraries**:
+   The scripts finds your Pi's IP address by pinging its name, by default this is `raspberrypi`. If you have multiple Pis on your network, ensure your Raspberry Pi has a unique name, or the script may not stream to the correct Pi.
+
+3. **Enable & Install Required Libraries**:
    Some of the following libraries may already be installed on Pi.
    <details>
      <Summary>SPI</Summary>
@@ -151,40 +149,19 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 1. Open a terminal on the Mac and navigate to the location of the `screen_capture.py` script.
 2. Run the script:
    ```bash
-   python3 screen_capture.py --host 192.168.86.49 --top 100 --left 1480 --width 242 --height 242 --target-width 240 --target-height 240 --timesleep 0.05 --quality 80 --rotation 90
+   python3 screen_capture.py --host elderflower  --top 120 --left 1480 --width 242 --height 242 --target-width 240 --target-height 240 --framerate 100 --quality 100 --rotation 0
    ```
    Configuration:
-   - Replace the host ip address with your Raspberry Pi’s IP address
+   - `host` is your Raspberry Pi's name
    - `top` and `left` define the origin of the capture region in pixels
    - `width` and `height` define the size of the capture region in pixels. 2px added for margin.
    - `target-width` and `target-height` is the size of the LCD in pixels
-   - `timesleep` adjusts the refresh rate (lower is higher refresh rate)
+   - `framerate` adjusts the image frame rate
    - `quality` adjust the image quality (0-100)
    - `rotation` defines the rotation the image is displayed (`0`,`90`,`180`,`270`)
 
 The selected portion of the Mac’s screen will be mirrored on the Pi’s LCD.
 
----
-
-### **Troubleshooting**
-
-1. **Screen Not Updating**:
-   - Ensure both scripts are running and connected.
-   - Check the network connection between the Mac and Pi.
-
-2. **Image is Truncated or Corrupted**:
-   - Ensure the Mac script sends complete images.
-   - Increase the delay (`time.sleep`) in the Mac script if needed.
-
-3. **Scripts Not Connecting**:
-   - Verify the Pi’s IP address using:
-     ```bash
-     hostname -I
-     ```
-   - Ensure both devices are on the same network.
-
-4. **Libraries Not Found**:
-   - Reinstall the missing libraries using `pip3`.
 
 
 
