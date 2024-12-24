@@ -143,7 +143,7 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
    ```bash
    sudo python3 screen_stream.py
    ```
-   The screen will say "Waitng for connection..." if successful
+   The screen will display the Raspberry Pi's name and "Waitng for connection..." if successful
 
 #### Step 2: Start the Sender on the Mac
 1. Open a terminal on the Mac and navigate to the location of the `screen_capture.py` script.
