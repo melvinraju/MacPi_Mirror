@@ -95,15 +95,10 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 4. **Manufacturer’s Display Library**:
    - In the `screen_stream.py` script, the line `from lib import LCD_1inch54` points towards the 1.54 inch display library, this can be changed to another display size. Look for whats available in the `lib` folder and edit the imprt `LCD_1inch54` value.
 
-5. **Make the Script Executable**:
-   Locate the script location in terminal and make the script executable:
-   ```bash
-   chmod +x screen_stream.py
-   ```
 
-6. Open a terminal on the Pi and navigate to the location of the `screen_stream.py` script.
+5. Open a terminal on the Pi and navigate to the location of the `screen_stream.py` script.
 
-7. Run the script:
+6. Run the script:
    ```bash
    python3 screen_stream.py
    ```
@@ -126,14 +121,8 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
    - Save the MacPi Mirror repo folder in your desired location (the folder must contain `screen_capture.py`). Note down the file path.
 
 
-4. **Make the Script Executable**:
-   Locate the script location in terminal and make the script executable:
-   ```bash
-   chmod +x screen_capture.py
-   ```
-
-5. Open a terminal on the Mac and navigate to the location of the `screen_capture.py` script.
-6. Run the script:
+4. Open a terminal on the Mac and navigate to the location of the `screen_capture.py` script.
+5. Run the script:
    ```bash
    python3 screen_capture.py --host elderflower  --top 120 --left 1480 --width 242 --height 242 --target-width 240 --target-height 240 --framerate 100 --quality 100 --rotation 0
    ```
