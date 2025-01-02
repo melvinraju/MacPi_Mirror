@@ -1,0 +1,12 @@
+[Unit]
+Description=Screen Stream Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /path/to/screen_stream.py
+WorkingDirectory=/path/to/
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target
