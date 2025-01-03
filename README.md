@@ -137,10 +137,14 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 
 The selected portion of the Mac’s screen will be mirrored on the Pi’s LCD.
 
-chmod +x /path/to/screen_stream.py
+chmod +x /home/tiramisu/Desktop/MacPi_Mirror-main/screen_stream.py
+
 sudo nano /etc/systemd/system/screen_stream.service
+
 sudo systemctl daemon-reload
+
 sudo systemctl enable screen_stream.service
+
 sudo systemctl start screen_stream.service
 
 
