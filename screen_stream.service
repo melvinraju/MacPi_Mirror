@@ -3,10 +3,10 @@ Description=Screen Stream Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /path/to/screen_stream.py
-WorkingDirectory=/path/to/
+ExecStart=/usr/bin/python3 /home/tiramisu/Desktop/MacPi_Mirror-main/screen_stream.py
+WorkingDirectory=/home/tiramisu/Desktop/MacPi_Mirror-main
 Restart=always
-User=pi
+User=tiramisu
 
 [Install]
 WantedBy=multi-user.target
