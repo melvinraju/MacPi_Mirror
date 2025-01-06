@@ -15,12 +15,12 @@ DEVICE_NAME = "Figproxy_Receiver"
 
 # Track encoder position
 position = 0
-last_position = 0
+old_position = 0
 last_clk_state = 0
 
 
 async def connect_to_m5dial():
-    global last_clk_state, position, last_position
+    global last_clk_state, position, old_position
     device = await BleakScanner.find_device_by_name(DEVICE_NAME)
     if not device:
         raise Exception(f"Device {DEVICE_NAME} not found.")
@@ -30,6 +30,7 @@ async def connect_to_m5dial():
         
         # Initialize last_clk_state
         last_clk_state = GPIO.input(CLK)
+        old_position = position // 2  # Initialize old position
 
         while True:
             clk_state = GPIO.input(CLK)
@@ -42,26 +43,27 @@ async def connect_to_m5dial():
                     position += 1  # Clockwise
                 else:
                     position -= 1  # Anticlockwise
-                
-                new_position = position // 2  # Divide by 2 to stabilize output
 
-                if new_position != last_position:
-                    if new_position > last_position:
+                # Divide by 2 to stabilize
+                new_position = position // 2
+
+                if new_position != old_position:
+                    if new_position > old_position:
                         await client.write_gatt_char(CHARACTERISTIC_UUID, b'C')  # Clockwise
-                        print(f"Raw: {position}, Divided: {new_position}, C")  # Debug print
+                        print("C")  # Print on new line
                     else:
                         await client.write_gatt_char(CHARACTERISTIC_UUID, b'A')  # Anticlockwise
-                        print(f"Raw: {position}, Divided: {new_position}, A")  # Debug print
+                        print("A")  # Print on new line
 
-                    last_position = new_position  # Update position
+                    old_position = new_position  # Update old position
 
                 last_clk_state = clk_state
 
             # Detect button press
             if sw_state == GPIO.LOW:
                 await client.write_gatt_char(CHARACTERISTIC_UUID, b'P')  # Button Press
-                print(f"Raw: {position}, P")  # Print for button press
-                time.sleep(0.2)  # Debounce
+                print("P")  # Print button press
+                time.sleep(0.5)  # Debounce
 
             await asyncio.sleep(0.001)
 
