@@ -8,8 +8,6 @@ CLK = 4
 DT = 17
 SW = 22
 
-last_clk_state = GPIO.LOW
-
 # UUIDs for BLE Service and Characteristic
 SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
@@ -23,11 +21,16 @@ async def connect_to_m5dial():
 
     async with BleakClient(device) as client:
         print(f"Connected to {DEVICE_NAME}")
+
+        # Initialize last_clk_state here
+        last_clk_state = GPIO.input(CLK)
+
         while True:
             clk_state = GPIO.input(CLK)
             dt_state = GPIO.input(DT)
             sw_state = GPIO.input(SW)
 
+            # Check for rotation
             if clk_state != last_clk_state:
                 if dt_state != clk_state:
                     await client.write_gatt_char(CHARACTERISTIC_UUID, b'C')  # Clockwise
@@ -35,8 +38,9 @@ async def connect_to_m5dial():
                 else:
                     await client.write_gatt_char(CHARACTERISTIC_UUID, b'A')  # Anticlockwise
                     print("Sent: A")
-                last_clk_state = clk_state
+                last_clk_state = clk_state  # Update last_clk_state
 
+            # Check for button press
             if sw_state == GPIO.LOW:
                 await client.write_gatt_char(CHARACTERISTIC_UUID, b'P')  # Button Press
                 print("Sent: P")
