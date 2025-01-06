@@ -14,54 +14,57 @@ CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 DEVICE_NAME = "Figproxy_Receiver"
 
 # Track encoder position
-encoder_position = 0
-old_position = 0
+position = 0
+last_position = 0
 last_clk_state = 0
 
-async def connect_to_m5dial():
-    global encoder_position, old_position, last_clk_state
 
-    # Connect to BLE device
+async def connect_to_m5dial():
+    global last_clk_state, position, last_position
     device = await BleakScanner.find_device_by_name(DEVICE_NAME)
     if not device:
         raise Exception(f"Device {DEVICE_NAME} not found.")
 
     async with BleakClient(device) as client:
         print(f"Connected to {DEVICE_NAME}")
-
-        # Initialize last CLK state
+        
+        # Initialize last_clk_state
         last_clk_state = GPIO.input(CLK)
-        old_position = encoder_position  # Initial position
 
         while True:
             clk_state = GPIO.input(CLK)
             dt_state = GPIO.input(DT)
+            sw_state = GPIO.input(SW)
 
-            # Detect direction
+            # Detect encoder rotation
             if clk_state != last_clk_state:
-                # Determine if rotating clockwise or anticlockwise
                 if dt_state != clk_state:
-                    encoder_position += 1  # Clockwise
+                    position += 1  # Clockwise
                 else:
-                    encoder_position -= 1  # Anticlockwise
+                    position -= 1  # Anticlockwise
+                
+                new_position = position // 2  # Divide by 2 to stabilize output
 
-                last_clk_state = clk_state  # Update for next cycle
+                if new_position != last_position:
+                    if new_position > last_position:
+                        await client.write_gatt_char(CHARACTERISTIC_UUID, b'C')  # Clockwise
+                        print("C", end="", flush=True)
+                    else:
+                        await client.write_gatt_char(CHARACTERISTIC_UUID, b'A')  # Anticlockwise
+                        print("A", end="", flush=True)
 
-            # Send data only if the position has changed
-            if encoder_position != old_position:
-                if encoder_position > old_position:
-                    await client.write_gatt_char(CHARACTERISTIC_UUID, b'C')  # Clockwise
-                else:
-                    await client.write_gatt_char(CHARACTERISTIC_UUID, b'A')  # Anticlockwise
+                    last_position = new_position  # Update position
 
-                old_position = encoder_position  # Update last known position
+                last_clk_state = clk_state
 
-            # Button press detection
-            if GPIO.input(SW) == GPIO.LOW:
+            # Detect button press
+            if sw_state == GPIO.LOW:
                 await client.write_gatt_char(CHARACTERISTIC_UUID, b'P')  # Button Press
-                time.sleep(0.2)  # Simple debounce
+                print("P", end="", flush=True)
+                time.sleep(0.2)  # Debounce
 
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.001)
+
 
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
@@ -69,10 +72,11 @@ def setup_gpio():
     GPIO.setup(DT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(SW, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
+
 if __name__ == "__main__":
     setup_gpio()
     try:
         asyncio.run(connect_to_m5dial())
     except KeyboardInterrupt:
-        print("Disconnected.")
+        print("\nDisconnected.")
         GPIO.cleanup()
