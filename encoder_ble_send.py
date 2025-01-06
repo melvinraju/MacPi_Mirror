@@ -13,9 +13,12 @@ SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 DEVICE_NAME = "Figproxy_Receiver"
 
-# Track the last known encoder position
+# Track encoder position
 encoder_position = 0
 old_position = 0
+
+# Track button state
+last_button_state = GPIO.HIGH
 
 
 # Function to read the encoder position
@@ -24,11 +27,12 @@ def read_encoder():
     clk_state = GPIO.input(CLK)
     dt_state = GPIO.input(DT)
 
-    # Update the encoder position based on direction
-    if clk_state != dt_state:
-        encoder_position += 1  # Clockwise
-    else:
-        encoder_position -= 1  # Anticlockwise
+    # Detect rotation direction
+    if clk_state == GPIO.LOW:
+        if dt_state == GPIO.HIGH:
+            encoder_position += 1  # Clockwise
+        else:
+            encoder_position -= 1  # Anticlockwise
 
 
 # Asynchronous BLE connection and write function
@@ -40,27 +44,30 @@ async def connect_to_m5dial():
     async with BleakClient(device) as client:
         print(f"Connected to {DEVICE_NAME}")
 
-        global old_position
+        global old_position, last_button_state
 
         while True:
             read_encoder()
             new_position = encoder_position // 2  # Divide by 2 for detent handling
 
-            # Detect rotation direction
+            # Detect rotation (Only send if position changes)
             if new_position != old_position:
                 if new_position > old_position:
-                    await client.write_gatt_char(CHARACTERISTIC_UUID, b'C')
-                    print("C", end="", flush=True)  # Print on the same line
+                    await client.write_gatt_char(CHARACTERISTIC_UUID, b'C')  # Clockwise
+                    print("C", end="", flush=True)
                 else:
-                    await client.write_gatt_char(CHARACTERISTIC_UUID, b'A')
-                    print("A", end="", flush=True)  # Print on the same line
+                    await client.write_gatt_char(CHARACTERISTIC_UUID, b'A')  # Anticlockwise
+                    print("A", end="", flush=True)
                 old_position = new_position
 
-            # Detect button press (LOW when pressed)
-            if GPIO.input(SW) == GPIO.LOW:
+            # Detect button press (Only on falling edge)
+            button_state = GPIO.input(SW)
+            if button_state == GPIO.LOW and last_button_state == GPIO.HIGH:
                 await client.write_gatt_char(CHARACTERISTIC_UUID, b'P')
                 print("P", end="", flush=True)
                 time.sleep(0.2)  # Simple debounce
+
+            last_button_state = button_state  # Update button state
 
             await asyncio.sleep(0.01)
 
