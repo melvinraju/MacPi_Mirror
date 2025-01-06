@@ -45,14 +45,13 @@ async def connect_to_m5dial():
                 
                 new_position = position // 2  # Divide by 2 to stabilize output
 
-                # Print raw position and letter for debugging
                 if new_position != last_position:
                     if new_position > last_position:
                         await client.write_gatt_char(CHARACTERISTIC_UUID, b'C')  # Clockwise
-                        print(f"{position} C")
+                        print(f"{new_position} C")  # Debug print
                     else:
                         await client.write_gatt_char(CHARACTERISTIC_UUID, b'A')  # Anticlockwise
-                        print(f"{position} A")
+                        print(f"{new_position} A")  # Debug print
 
                     last_position = new_position  # Update position
 
@@ -61,7 +60,7 @@ async def connect_to_m5dial():
             # Detect button press
             if sw_state == GPIO.LOW:
                 await client.write_gatt_char(CHARACTERISTIC_UUID, b'P')  # Button Press
-                print(f"{position} P")
+                print(f"{position} P")  # Debug print for button
                 time.sleep(0.2)  # Debounce
 
             await asyncio.sleep(0.001)
