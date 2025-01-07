@@ -41,18 +41,18 @@ async def connect_to_m5dial():
 
                 if position != old_position:
                     if position > old_position:
-                        await client.write_gatt_char(CHARACTERISTIC_UUID, b'C')
-                        print("Sending: C")
+                        await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)  # Write with Response
+                        print("C")
                     else:
-                        await client.write_gatt_char(CHARACTERISTIC_UUID, b'A')
-                        print("Sending: A")
+                        await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)  # Write with Response
+                        print("A")
 
                     old_position = position
                 last_clk_state = clk_state
 
             if sw_state == GPIO.LOW:
-                await client.write_gatt_char(CHARACTERISTIC_UUID, b'P')
-                print("Sending: P")
+                await client.write_gatt_char(CHARACTERISTIC_UUID, b'P', response=True)
+                print("P")
                 time.sleep(0.5)
 
             await asyncio.sleep(0.001)
