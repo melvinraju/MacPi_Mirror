@@ -13,8 +13,7 @@ SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 DEVICE_NAME = "Figproxy_Receiver"
 
-pulse_count = 0
-pulses_per_detent = 2  # Adjust based on encoder type (2 or 4)
+detent_count = 0
 last_clk_state = 0
 
 
@@ -43,28 +42,22 @@ async def connect_to_m5dial():
 
 
 async def handle_encoder(client):
-    global last_clk_state, pulse_count
+    global last_clk_state
 
     clk_state = GPIO.input(CLK)
     dt_state = GPIO.input(DT)
 
-    # Count pulses on falling edge
+    # Detect falling edge (one pulse per detent)
     if clk_state == 0 and last_clk_state == 1:
-        pulse_count += 1  # Increment pulse count
+        # Check DT to determine direction
+        if dt_state == 0:
+            await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
+            print("C", end="", flush=True)
+        else:
+            await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
+            print("A", end="", flush=True)
 
-        # Full detent reached
-        if pulse_count >= pulses_per_detent:
-            pulse_count = 0  # Reset pulse count after detent
-
-            # Determine direction
-            if dt_state == 0:
-                await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
-                print("C", end="", flush=True)
-            else:
-                await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
-                print("A", end="", flush=True)
-
-    # Update last CLK state
+    # Update the last CLK state
     last_clk_state = clk_state
 
     # Button Press (with reduced debounce)
