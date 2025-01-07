@@ -13,15 +13,13 @@ SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 DEVICE_NAME = "Figproxy_Receiver"
 
-position = 0
-old_position = 0
+pulse_count = 0
+pulses_per_detent = 2  # Adjust based on encoder type (2 or 4)
 last_clk_state = 0
-debounce_time = 0.003  # 3 ms debounce for encoder
-button_debounce_time = 0.1  # 100 ms debounce for button
 
 
 async def connect_to_m5dial():
-    global last_clk_state, position, old_position
+    global last_clk_state
     print("Scanning for Figproxy_Receiver...")
 
     while True:
@@ -45,34 +43,37 @@ async def connect_to_m5dial():
 
 
 async def handle_encoder(client):
-    global last_clk_state, position, old_position
+    global last_clk_state, pulse_count
 
     clk_state = GPIO.input(CLK)
     dt_state = GPIO.input(DT)
 
-    # Detect falling edge only (more stable)
+    # Count pulses on falling edge
     if clk_state == 0 and last_clk_state == 1:
-        # Determine direction based on DT state during falling CLK edge
-        if dt_state == 0:
-            position += 1  # Clockwise
-            await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
-            print("C", end="", flush=True)
-        else:
-            position -= 1  # Anticlockwise
-            await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
-            print("A", end="", flush=True)
+        pulse_count += 1  # Increment pulse count
+
+        # Full detent reached
+        if pulse_count >= pulses_per_detent:
+            pulse_count = 0  # Reset pulse count after detent
+
+            # Determine direction
+            if dt_state == 0:
+                await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
+                print("C", end="", flush=True)
+            else:
+                await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
+                print("A", end="", flush=True)
 
     # Update last CLK state
     last_clk_state = clk_state
 
     # Button Press (with reduced debounce)
     if GPIO.input(SW) == GPIO.LOW:
-        await asyncio.sleep(button_debounce_time)
-
+        await asyncio.sleep(0.1)  # 100 ms debounce
         if GPIO.input(SW) == GPIO.LOW:
             await client.write_gatt_char(CHARACTERISTIC_UUID, b'P', response=True)
             print("P", end="", flush=True)
-            time.sleep(0.2)  # Shorter debounce for faster response
+            time.sleep(0.2)  # Short debounce
 
 
 def setup_gpio():
