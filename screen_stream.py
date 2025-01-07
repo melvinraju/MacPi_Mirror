@@ -8,32 +8,32 @@ import zlib
 import time
 from lib import LCD_1inch54
 
-
-# === DISPLAY FUNCTIONS ===
+# === DISPLAY FUNCTIONS (CUSTOMIZABLE FOR DIFFERENT LCD LIBRARIES) ===
 def init_display():
     display = LCD_1inch54.LCD_1inch54()
     display.Init()
     return display
 
+def clear_display(display):
+    display.clear()
+
+def set_backlight(display, brightness):
+    display.bl_DutyCycle(brightness)
 
 def show_image(display, image):
     display.ShowImage(image)
 
-
-# Initialize display
+# Initialize display and backlight
 disp = init_display()
-disp.clear()
-disp.bl_DutyCycle(100)  # Backlight always at 100%
+clear_display(disp)
+set_backlight(disp, 100)
 
 # === NETWORK CONFIGURATION ===
 HOST = "0.0.0.0"
 PORT = 5000
-USE_UDP = True  # Set to True for UDP, False for TCP
-INACTIVITY_TIMEOUT = 5  # Time in seconds to trigger waiting screen
 
 # Get the Pi's hostname
 hostname = os.uname()[1]
-
 
 def get_wifi_ssid():
     """Retrieve the Wi-Fi SSID or return 'Not connected' if unavailable."""
@@ -46,7 +46,6 @@ def get_wifi_ssid():
     except subprocess.CalledProcessError:
         return "WiFi: Not connected"
 
-
 def display_waiting_message():
     """Display the hostname, Wi-Fi status, and waiting message on the screen."""
     image = Image.new("RGB", (disp.width, disp.height), "BLACK")
@@ -55,8 +54,10 @@ def display_waiting_message():
     font = ImageFont.load_default()
     ssid_info = get_wifi_ssid()
 
+    # Prepare the message with hostname and Wi-Fi info
     message = f"{hostname}\n{ssid_info}\nWaiting for stream..."
 
+    # Center the text on the screen
     bbox = draw.multiline_textbbox((0, 0), message, font=font)
     w = bbox[2] - bbox[0]
     h = bbox[3] - bbox[1]
@@ -71,24 +72,28 @@ def display_waiting_message():
 
     show_image(disp, image)
 
-
 def receive_image(conn):
     """Receive and decompress an image over the socket connection."""
     try:
+        # Receive image size (8 bytes)
         size_data = conn.recv(8)
         if not size_data or len(size_data) < 8:
+            print("No data received. Client may have disconnected.")
             return None, False
 
         image_size = int.from_bytes(size_data, byteorder="big")
         print(f"Receiving compressed image of size: {image_size / 1024:.2f} KB...")
 
+        # Receive image data
         received_data = b""
         while len(received_data) < image_size:
             chunk = conn.recv(min(4096, image_size - len(received_data)))
             if not chunk:
+                print("Connection lost during image reception.")
                 return None, False
             received_data += chunk
 
+        # Decompress the image
         decompressed_data = zlib.decompress(received_data)
 
         start_time = time.time()
@@ -97,60 +102,42 @@ def receive_image(conn):
         end_time = time.time()
 
         print(f"Frame displayed in {end_time - start_time:.2f} seconds")
-
         return True
+
     except Exception as e:
         print(f"Error receiving image: {e}")
         return None, False
 
 
-# === MAIN SERVER LOOP (Handles Inactivity) ===
-last_frame_time = time.time()
-
+# === MAIN SERVER LOOP ===
 while True:
     try:
-        with socket.socket(socket.AF_INET,
-                           socket.SOCK_DGRAM if USE_UDP else socket.SOCK_STREAM) as server:
+        # Create a fresh socket each time we come back to wait for a new client
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
             server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server.bind((HOST, PORT))
+            server.listen(1)
 
-            if not USE_UDP:
-                server.listen(1)
-
+            # Show the waiting screen and block until we get a connection
+            display_waiting_message()
             print(f"{hostname} - {get_wifi_ssid()} - Waiting for stream...")
 
-            display_waiting_message()
+            # accept() will block until a client connects
+            conn, addr = server.accept()
+            print(f"Connection from {addr}")
 
-            while True:
-                # Handle UDP or TCP connections
-                if USE_UDP:
-                    server.settimeout(1)
-                    try:
-                        data, addr = server.recvfrom(65535)
-                        print(f"UDP Data received from {addr}")
+            with conn:
+                while True:
+                    keep_alive = receive_image(conn)
+                    if not keep_alive:
+                        print("Client disconnected. Returning to waiting screen...")
+                        break
 
-                        if data:
-                            last_frame_time = time.time()
-                            receive_image(server)
-                    except socket.timeout:
-                        pass
-
-                else:
-                    conn, addr = server.accept()
-                    print(f"Connection from {addr}")
-
-                    with conn:
-                        while True:
-                            keep_alive = receive_image(conn)
-                            if not keep_alive:
-                                print("Client disconnected.")
-                                break
-
-                # Check for inactivity (5 seconds)
-                if time.time() - last_frame_time > INACTIVITY_TIMEOUT:
-                    print("No data received. Returning to waiting screen...")
-                    display_waiting_message()
-                    last_frame_time = time.time()
+            # Once we break from the inner loop, we close conn and
+            # go back to the top of the outer while True to rebind
+            # and show waiting screen again.
 
     except Exception as e:
         print(f"Server error: {e}")
+        # Sleep briefly to avoid rapid crash loops if something goes wrong
+        time.sleep(5)
