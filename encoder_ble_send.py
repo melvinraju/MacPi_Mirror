@@ -13,8 +13,7 @@ SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 DEVICE_NAME = "Figproxy_Receiver"
 
-position = 0
-old_position = 0
+pulse_count = 0
 last_clk_state = 0
 
 
@@ -43,30 +42,37 @@ async def connect_to_m5dial():
 
 
 async def handle_encoder(client):
-    global last_clk_state
+    global last_clk_state, pulse_count
 
     clk_state = GPIO.input(CLK)
     dt_state = GPIO.input(DT)
 
-    # Detect both rising and falling edges (tracks each detent)
-    if clk_state != last_clk_state:
-        if clk_state == dt_state:
-            await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
-            print("C", end="", flush=True)
-        else:
-            await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
-            print("A", end="", flush=True)
+    # Detect falling edge of CLK
+    if clk_state == 0 and last_clk_state == 1:
+        pulse_count += 1
 
-    # Update last CLK state
+        # Only register every second pulse (1 detent = 2 pulses)
+        if pulse_count >= 2:
+            pulse_count = 0  # Reset after 1 detent
+
+            # Determine direction (fix reverse issue)
+            if dt_state == 0:
+                await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
+                print("C", end="", flush=True)
+            else:
+                await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
+                print("A", end="", flush=True)
+
+    # Update CLK state for next cycle
     last_clk_state = clk_state
 
-    # Button Press (with reduced debounce)
+    # Button Press (short debounce for quick response)
     if GPIO.input(SW) == GPIO.LOW:
-        await asyncio.sleep(0.1)  # 100 ms debounce
+        await asyncio.sleep(0.1)
         if GPIO.input(SW) == GPIO.LOW:
             await client.write_gatt_char(CHARACTERISTIC_UUID, b'P', response=True)
             print("P", end="", flush=True)
-            time.sleep(0.2)  # Short debounce
+            time.sleep(0.2)
 
 
 def setup_gpio():
