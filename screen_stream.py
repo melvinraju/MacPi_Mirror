@@ -117,12 +117,13 @@ def receive_image(conn):
         return None, False
 
 
-# === MAIN SERVER LOOP ===
+# === MAIN SERVER LOOP (Restores Original Functionality) ===
 while True:
     try:
         # Show initial waiting screen
         display_waiting_message()
 
+        # Start the server and wait for a client
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
             server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server.bind((HOST, PORT))
@@ -130,27 +131,17 @@ while True:
 
             print(f"{hostname} - {get_wifi_ssid()} - Waiting for stream...")
 
-            while True:
-                # Display waiting message every 2 seconds until a connection is established
-                display_waiting_message()
-                time.sleep(2)
+            # Accept connections in a blocking call (no timeout)
+            conn, addr = server.accept()
+            print(f"Connection from {addr}")
 
-                # Accept a new connection if available
-                server.settimeout(1)
-                try:
-                    conn, addr = server.accept()
-                    print(f"Connection from {addr}")
-                    server.settimeout(None)  # Remove timeout during connection
-                except socket.timeout:
-                    continue
-
-                # Handle connection
-                with conn:
-                    while True:
-                        keep_alive = receive_image(conn)
-                        if not keep_alive:
-                            print("Client disconnected. Returning to waiting screen...")
-                            break  # Break out of the connection loop but stay in the outer loop
+            # Handle connection
+            with conn:
+                while True:
+                    keep_alive = receive_image(conn)
+                    if not keep_alive:
+                        print("Client disconnected. Returning to waiting screen...")
+                        break  # Disconnect and return to waiting loop
 
     except Exception as e:
         print(f"Server error: {e}")
