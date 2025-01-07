@@ -47,26 +47,26 @@ async def handle_encoder(client):
     clk_state = GPIO.input(CLK)
     dt_state = GPIO.input(DT)
 
-    # Detect falling edge of CLK
-    if clk_state == 0 and last_clk_state == 1:
+    # Count both rising and falling edges of CLK
+    if clk_state != last_clk_state:
         pulse_count += 1
 
-        # Only register every second pulse (1 detent = 2 pulses)
-        if pulse_count >= 2:
-            pulse_count = 0  # Reset after 1 detent
+        # Register one detent after 4 pulses
+        if pulse_count >= 4:
+            pulse_count = 0  # Reset pulse count after detent
 
-            # Determine direction (fix reverse issue)
-            if dt_state == 0:
+            # Determine direction based on DT state
+            if clk_state == dt_state:
                 await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
                 print("C", end="", flush=True)
             else:
                 await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
                 print("A", end="", flush=True)
 
-    # Update CLK state for next cycle
+    # Update CLK state
     last_clk_state = clk_state
 
-    # Button Press (short debounce for quick response)
+    # Button Press (debounce)
     if GPIO.input(SW) == GPIO.LOW:
         await asyncio.sleep(0.1)
         if GPIO.input(SW) == GPIO.LOW:
