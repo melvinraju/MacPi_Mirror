@@ -13,15 +13,14 @@ SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 DEVICE_NAME = "Figproxy_Receiver"
 
-# Track encoder state
-last_state = 0
 position = 0
 old_position = 0
-debounce_time = 0.001  # Encoder debounce
+last_clk_state = 0
+debounce_time = 0.003  # 3 ms debounce for encoder
 
 
 async def connect_to_m5dial():
-    global last_state, position, old_position
+    global last_clk_state, position, old_position
     print("Scanning for Figproxy_Receiver...")
 
     while True:
@@ -33,11 +32,11 @@ async def connect_to_m5dial():
                 async with BleakClient(device) as client:
                     print(f"Connected to {DEVICE_NAME}")
                     
-                    last_state = (GPIO.input(CLK) << 1) | GPIO.input(DT)
+                    last_clk_state = GPIO.input(CLK)
 
                     while True:
                         await handle_encoder(client)
-                        await asyncio.sleep(0.001)
+                        await asyncio.sleep(0.001)  # Fast polling loop
 
         except BleakError as e:
             print(f"Connection failed: {e}. Retrying in 5 seconds...")
@@ -45,37 +44,33 @@ async def connect_to_m5dial():
 
 
 async def handle_encoder(client):
-    global last_state, position, old_position
+    global last_clk_state, position, old_position
 
-    # Read current state of CLK and DT
-    current_state = (GPIO.input(CLK) << 1) | GPIO.input(DT)
+    clk_state = GPIO.input(CLK)
+    dt_state = GPIO.input(DT)
 
-    # Detect rotation by comparing current state to the last known state
-    if current_state != last_state:
-        if ((last_state == 0b00 and current_state == 0b01) or
-            (last_state == 0b01 and current_state == 0b11) or
-            (last_state == 0b11 and current_state == 0b10) or
-            (last_state == 0b10 and current_state == 0b00)):
+    # Detect leading-edge (CLK falling)
+    if clk_state == 0 and last_clk_state == 1:
+        # Determine direction based on DT state
+        if dt_state == 1:
             position += 1  # Clockwise
-
-        elif ((last_state == 0b00 and current_state == 0b10) or
-              (last_state == 0b10 and current_state == 0b11) or
-              (last_state == 0b11 and current_state == 0b01) or
-              (last_state == 0b01 and current_state == 0b00)):
+            await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
+            print("C", end="", flush=True)
+        else:
             position -= 1  # Anticlockwise
+            await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
+            print("A", end="", flush=True)
 
-        # Update state
-        last_state = current_state
+    # Update last state for next loop iteration
+    last_clk_state = clk_state
 
-        # Send BLE signal if position changed
-        if position != old_position:
-            if position > old_position:
-                await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
-                print("C")
-            else:
-                await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
-                print("A")
-            old_position = position
+    # Button Press (with debounce)
+    if GPIO.input(SW) == GPIO.LOW:
+        await asyncio.sleep(0.3)  # 300 ms debounce for button
+        if GPIO.input(SW) == GPIO.LOW:  # Check again after debounce
+            await client.write_gatt_char(CHARACTERISTIC_UUID, b'P', response=True)
+            print("P", end="", flush=True)
+            time.sleep(0.5)  # Additional debounce
 
 
 def setup_gpio():
