@@ -131,7 +131,7 @@ while True:
             print(f"{hostname} - {get_wifi_ssid()} - Waiting for stream...")
 
             while True:
-                # Continuously refresh the waiting screen
+                # Display waiting message every 2 seconds until a connection is established
                 display_waiting_message()
                 time.sleep(2)
 
@@ -139,18 +139,18 @@ while True:
                 server.settimeout(1)
                 try:
                     conn, addr = server.accept()
+                    print(f"Connection from {addr}")
+                    server.settimeout(None)  # Remove timeout during connection
                 except socket.timeout:
                     continue
 
-                print(f"Connection from {addr}")
-
+                # Handle connection
                 with conn:
                     while True:
                         keep_alive = receive_image(conn)
                         if not keep_alive:
                             print("Client disconnected. Returning to waiting screen...")
-                            display_waiting_message()  # Return to waiting message after disconnect
-                            break
+                            break  # Break out of the connection loop but stay in the outer loop
 
     except Exception as e:
         print(f"Server error: {e}")
