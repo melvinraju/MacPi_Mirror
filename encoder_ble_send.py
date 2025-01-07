@@ -17,6 +17,7 @@ position = 0
 old_position = 0
 last_clk_state = 0
 debounce_time = 0.003  # 3 ms debounce for encoder
+button_debounce_time = 0.1  # 100 ms debounce for button
 
 
 async def connect_to_m5dial():
@@ -49,10 +50,10 @@ async def handle_encoder(client):
     clk_state = GPIO.input(CLK)
     dt_state = GPIO.input(DT)
 
-    # Detect leading-edge (CLK falling)
-    if clk_state == 0 and last_clk_state == 1:
-        # Determine direction based on DT state
-        if dt_state == 1:
+    # Detect both rising and falling edges
+    if clk_state != last_clk_state:
+        # Determine direction based on DT state during CLK edge
+        if clk_state == dt_state:
             position += 1  # Clockwise
             await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
             print("C", end="", flush=True)
@@ -61,16 +62,17 @@ async def handle_encoder(client):
             await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
             print("A", end="", flush=True)
 
-    # Update last state for next loop iteration
-    last_clk_state = clk_state
+        last_clk_state = clk_state
 
-    # Button Press (with debounce)
+    # Button Press (with reduced debounce)
     if GPIO.input(SW) == GPIO.LOW:
-        await asyncio.sleep(0.3)  # 300 ms debounce for button
-        if GPIO.input(SW) == GPIO.LOW:  # Check again after debounce
+        await asyncio.sleep(button_debounce_time)
+
+        # Re-check after debounce
+        if GPIO.input(SW) == GPIO.LOW:
             await client.write_gatt_char(CHARACTERISTIC_UUID, b'P', response=True)
             print("P", end="", flush=True)
-            time.sleep(0.5)  # Additional debounce
+            time.sleep(0.2)  # Shorter debounce for faster response
 
 
 def setup_gpio():
