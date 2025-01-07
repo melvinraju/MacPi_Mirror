@@ -1,9 +1,8 @@
 #!/usr/bin/python3
 import socket
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 from io import BytesIO
 import os
-import subprocess
 import time
 from lib import LCD_1inch54
 
@@ -19,28 +18,17 @@ PORT = 5000
 hostname = os.uname()[1]
 
 
-def get_wifi_ssid():
+def receive_image(server):
+    """Receive an image over UDP."""
     try:
-        ssid = subprocess.check_output(
-            ["iwgetid", "-r"], stderr=subprocess.DEVNULL
-        ).decode("utf-8").strip()
-        return f"WiFi: {ssid}" if ssid else "WiFi: Not connected"
-    except subprocess.CalledProcessError:
-        return "WiFi: Not connected"
-
-
-def receive_image(conn):
-    try:
-        size_data = conn.recv(8)
+        size_data, addr = server.recvfrom(8)
         if not size_data or len(size_data) < 8:
             return None, False
 
         image_size = int.from_bytes(size_data, byteorder="big")
         received_data = b""
         while len(received_data) < image_size:
-            chunk = conn.recv(min(4096, image_size - len(received_data)))
-            if not chunk:
-                return None, False
+            chunk, _ = server.recvfrom(4096)
             received_data += chunk
 
         return received_data, True
@@ -50,30 +38,25 @@ def receive_image(conn):
 
 while True:
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-            server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            server.bind((HOST, PORT))
-            server.listen(1)
+        server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        server.bind((HOST, PORT))
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1048576)  # 1 MB receive buffer
+        print(f"{hostname} - Waiting for stream...")
 
-            while True:
-                conn, addr = server.accept()
-                with conn:
-                    while True:
-                        image_data, keep_alive = receive_image(conn)
-                        if not keep_alive:
-                            break
+        while True:
+            image_data, keep_alive = receive_image(server)
+            if not keep_alive:
+                continue
 
-                        if image_data is None:
-                            continue
+            try:
+                start_time = time.time()
+                image = Image.open(BytesIO(image_data))
+                disp.ShowImage(image)
+                end_time = time.time()
 
-                        try:
-                            start_time = time.time()
-                            image = Image.open(BytesIO(image_data))
-                            disp.ShowImage(image)
-                            end_time = time.time()
-
-                            print(f"Frame displayed in {end_time - start_time:.2f} seconds")
-                        except Exception as e:
-                            continue
+                print(f"Frame displayed in {end_time - start_time:.2f} seconds")
+            except Exception as e:
+                print(f"Error displaying image: {e}")
+                continue
     except Exception as e:
         print(f"Server error: {e}")
