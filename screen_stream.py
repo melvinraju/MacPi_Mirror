@@ -28,7 +28,8 @@ disp.bl_DutyCycle(100)  # Backlight always at 100%
 # === NETWORK CONFIGURATION ===
 HOST = "0.0.0.0"
 PORT = 5000
-USE_UDP = False  # Set to True for UDP, False for TCP
+USE_UDP = True  # Set to True for UDP, False for TCP
+INACTIVITY_TIMEOUT = 5  # Time in seconds to trigger waiting screen
 
 # Get the Pi's hostname
 hostname = os.uname()[1]
@@ -74,8 +75,6 @@ def display_waiting_message():
 def receive_image(conn):
     """Receive and decompress an image over the socket connection."""
     try:
-        conn.settimeout(5)  # Timeout if no data is received for 5 seconds
-
         size_data = conn.recv(8)
         if not size_data or len(size_data) < 8:
             return None, False
@@ -100,15 +99,14 @@ def receive_image(conn):
         print(f"Frame displayed in {end_time - start_time:.2f} seconds")
 
         return True
-    except socket.timeout:
-        print("No data received. Returning to waiting screen...")
-        return None, False
     except Exception as e:
         print(f"Error receiving image: {e}")
         return None, False
 
 
-# === MAIN SERVER LOOP ===
+# === MAIN SERVER LOOP (Handles Inactivity) ===
+last_frame_time = time.time()
+
 while True:
     try:
         with socket.socket(socket.AF_INET,
@@ -121,16 +119,22 @@ while True:
 
             print(f"{hostname} - {get_wifi_ssid()} - Waiting for stream...")
 
+            display_waiting_message()
+
             while True:
-                display_waiting_message()
+                # Handle UDP or TCP connections
                 if USE_UDP:
-                    server.settimeout(5)
+                    server.settimeout(1)
                     try:
                         data, addr = server.recvfrom(65535)
                         print(f"UDP Data received from {addr}")
-                        receive_image(server)
+
+                        if data:
+                            last_frame_time = time.time()
+                            receive_image(server)
                     except socket.timeout:
-                        continue
+                        pass
+
                 else:
                     conn, addr = server.accept()
                     print(f"Connection from {addr}")
@@ -139,8 +143,14 @@ while True:
                         while True:
                             keep_alive = receive_image(conn)
                             if not keep_alive:
-                                print("Client disconnected. Returning to waiting screen...")
+                                print("Client disconnected.")
                                 break
+
+                # Check for inactivity (5 seconds)
+                if time.time() - last_frame_time > INACTIVITY_TIMEOUT:
+                    print("No data received. Returning to waiting screen...")
+                    display_waiting_message()
+                    last_frame_time = time.time()
 
     except Exception as e:
         print(f"Server error: {e}")
