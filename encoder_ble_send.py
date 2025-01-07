@@ -3,17 +3,14 @@ from bleak import BleakClient, BleakScanner
 import asyncio
 import time
 
-# GPIO Pins for Encoder
 CLK = 4
 DT = 17
 SW = 22
 
-# UUIDs for BLE Service and Characteristic
 SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 DEVICE_NAME = "Figproxy_Receiver"
 
-# Track encoder position
 position = 0
 old_position = 0
 last_clk_state = 0
@@ -28,39 +25,35 @@ async def connect_to_m5dial():
     async with BleakClient(device) as client:
         print(f"Connected to {DEVICE_NAME}")
         
-        # Initialize last_clk_state
         last_clk_state = GPIO.input(CLK)
-        old_position = position  # Initialize old position
+        old_position = position
 
         while True:
             clk_state = GPIO.input(CLK)
             dt_state = GPIO.input(DT)
             sw_state = GPIO.input(SW)
 
-            # Detect encoder rotation
             if clk_state != last_clk_state:
                 if dt_state != clk_state:
-                    position += 1  # Clockwise
+                    position += 1
                 else:
-                    position -= 1  # Anticlockwise
+                    position -= 1
 
                 if position != old_position:
                     if position > old_position:
                         await client.write_gatt_char(CHARACTERISTIC_UUID, b'C')
-                        print("C")  # Print C for clockwise
+                        print("Sending: C")
                     else:
                         await client.write_gatt_char(CHARACTERISTIC_UUID, b'A')
-                        print("A")  # Print A for anticlockwise
+                        print("Sending: A")
 
-                    old_position = position  # Update old position
-
+                    old_position = position
                 last_clk_state = clk_state
 
-            # Detect button press
             if sw_state == GPIO.LOW:
                 await client.write_gatt_char(CHARACTERISTIC_UUID, b'P')
-                print("P")  # Print P for button press
-                time.sleep(0.5)  # Debounce
+                print("Sending: P")
+                time.sleep(0.5)
 
             await asyncio.sleep(0.001)
 
