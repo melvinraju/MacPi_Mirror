@@ -50,10 +50,10 @@ async def handle_encoder(client):
     clk_state = GPIO.input(CLK)
     dt_state = GPIO.input(DT)
 
-    # Detect both rising and falling edges
-    if clk_state != last_clk_state:
-        # Determine direction based on DT state during CLK edge
-        if clk_state == dt_state:
+    # Detect falling edge only (more stable)
+    if clk_state == 0 and last_clk_state == 1:
+        # Determine direction based on DT state during falling CLK edge
+        if dt_state == 0:
             position += 1  # Clockwise
             await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
             print("C", end="", flush=True)
@@ -62,13 +62,13 @@ async def handle_encoder(client):
             await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
             print("A", end="", flush=True)
 
-        last_clk_state = clk_state
+    # Update last CLK state
+    last_clk_state = clk_state
 
     # Button Press (with reduced debounce)
     if GPIO.input(SW) == GPIO.LOW:
         await asyncio.sleep(button_debounce_time)
 
-        # Re-check after debounce
         if GPIO.input(SW) == GPIO.LOW:
             await client.write_gatt_char(CHARACTERISTIC_UUID, b'P', response=True)
             print("P", end="", flush=True)
