@@ -4,34 +4,26 @@ from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import os
 import subprocess
-import zlib
 import time
+import zlib
 from lib import LCD_1inch54
 
 
-# === DISPLAY FUNCTIONS (CUSTOMIZABLE FOR DIFFERENT LCD LIBRARIES) ===
+# === DISPLAY FUNCTIONS ===
 def init_display():
     display = LCD_1inch54.LCD_1inch54()
     display.Init()
     return display
 
 
-def clear_display(display):
-    display.clear()
-
-
-def set_backlight(display, brightness):
-    display.bl_DutyCycle(brightness)
-
-
 def show_image(display, image):
     display.ShowImage(image)
 
 
-# Initialize display and backlight
+# Initialize display
 disp = init_display()
-clear_display(disp)
-set_backlight(disp, 100)
+disp.clear()
+disp.bl_DutyCycle(100)  # Backlight always at 100%
 
 # === NETWORK CONFIGURATION ===
 HOST = "0.0.0.0"
@@ -54,17 +46,15 @@ def get_wifi_ssid():
 
 
 def display_waiting_message():
-    """Display the hostname, Wi-Fi status, and waiting message on the screen."""
+    """Display the hostname, Wi-Fi, and 'Waiting for stream...' message."""
     image = Image.new("RGB", (disp.width, disp.height), "BLACK")
     draw = ImageDraw.Draw(image)
 
     font = ImageFont.load_default()
     ssid_info = get_wifi_ssid()
 
-    # Prepare the message with hostname and Wi-Fi info
     message = f"{hostname}\n{ssid_info}\nWaiting for stream..."
 
-    # Center the text on the screen
     bbox = draw.multiline_textbbox((0, 0), message, font=font)
     w = bbox[2] - bbox[0]
     h = bbox[3] - bbox[1]
@@ -83,7 +73,6 @@ def display_waiting_message():
 def receive_image(conn):
     """Receive and decompress an image over the socket connection."""
     try:
-        # Receive image size (8 bytes)
         size_data = conn.recv(8)
         if not size_data or len(size_data) < 8:
             print("No data received. Client may have disconnected.")
@@ -92,7 +81,6 @@ def receive_image(conn):
         image_size = int.from_bytes(size_data, byteorder="big")
         print(f"Receiving compressed image of size: {image_size / 1024:.2f} KB...")
 
-        # Receive image data
         received_data = b""
         while len(received_data) < image_size:
             chunk = conn.recv(min(4096, image_size - len(received_data)))
@@ -101,7 +89,6 @@ def receive_image(conn):
                 return None, False
             received_data += chunk
 
-        # Decompress the image
         decompressed_data = zlib.decompress(received_data)
 
         start_time = time.time()
@@ -117,13 +104,9 @@ def receive_image(conn):
         return None, False
 
 
-# === MAIN SERVER LOOP (Restores Original Functionality) ===
+# === MAIN SERVER LOOP ===
 while True:
     try:
-        # Show initial waiting screen
-        display_waiting_message()
-
-        # Start the server and wait for a client
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
             server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server.bind((HOST, PORT))
@@ -131,17 +114,23 @@ while True:
 
             print(f"{hostname} - {get_wifi_ssid()} - Waiting for stream...")
 
-            # Accept connections in a blocking call (no timeout)
-            conn, addr = server.accept()
-            print(f"Connection from {addr}")
+            while True:
+                display_waiting_message()
+                time.sleep(2)
 
-            # Handle connection
-            with conn:
-                while True:
-                    keep_alive = receive_image(conn)
-                    if not keep_alive:
-                        print("Client disconnected. Returning to waiting screen...")
-                        break  # Disconnect and return to waiting loop
+                server.settimeout(1)
+                try:
+                    conn, addr = server.accept()
+                except socket.timeout:
+                    continue
 
+                print(f"Connection from {addr}")
+
+                with conn:
+                    while True:
+                        keep_alive = receive_image(conn)
+                        if not keep_alive:
+                            print("Client disconnected. Returning to waiting screen...")
+                            break  # Break the connection loop, return to waiting
     except Exception as e:
         print(f"Server error: {e}")
