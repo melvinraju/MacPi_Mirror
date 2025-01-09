@@ -13,66 +13,96 @@ SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 DEVICE_NAME = "Figproxy_Receiver"
 
-last_clk_state = GPIO.HIGH
-last_dt_state = GPIO.HIGH
+# Encoder state tracking
+position = 0
+old_position = 0
+last_clk_state = 0
+last_direction = None  # Track last direction
+
+# Debounce timing
+encoder_debounce_time = 0.005  # 5 ms debounce for encoder
+button_debounce_time = 0.1  # 100 ms debounce for button
+
 
 async def connect_to_m5dial():
-    global last_clk_state, last_dt_state
+    global last_clk_state, position, old_position
     print("Scanning for Figproxy_Receiver...")
 
     while True:
         try:
             device = await BleakScanner.find_device_by_name(DEVICE_NAME)
-
             if device:
                 print(f"Found {DEVICE_NAME}, attempting to connect...")
                 async with BleakClient(device) as client:
                     print(f"Connected to {DEVICE_NAME}")
                     
                     last_clk_state = GPIO.input(CLK)
-                    last_dt_state = GPIO.input(DT)
+                    old_position = position
 
                     while True:
                         await handle_encoder(client)
-                        await asyncio.sleep(0.001)  # Fast polling loop
+                        await asyncio.sleep(0.001)
 
         except BleakError as e:
             print(f"Connection failed: {e}. Retrying in 5 seconds...")
             await asyncio.sleep(5)
 
+
 async def handle_encoder(client):
-    global last_clk_state, last_dt_state
+    global last_clk_state, position, old_position, last_direction
 
     clk_state = GPIO.input(CLK)
     dt_state = GPIO.input(DT)
+    sw_state = GPIO.input(SW)
 
-    # Detect changes in CLK
+    # Debounce Encoder
     if clk_state != last_clk_state:
-        # Determine direction based on DT state
-        if dt_state != clk_state:
-            await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
-            print("C", end="", flush=True)
-        else:
-            await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
-            print("A", end="", flush=True)
+        await asyncio.sleep(encoder_debounce_time)
 
-    # Update last states
-    last_clk_state = clk_state
-    last_dt_state = dt_state
+        clk_state = GPIO.input(CLK)
+        if clk_state != last_clk_state:
+            if dt_state != clk_state:  # Clockwise
+                if last_direction == 'CCW':
+                    position += 1  # Ignore the first detent after switching to CW
+                else:
+                    position += 1
+                last_direction = 'CW'
+            elif dt_state == clk_state:  # Anticlockwise
+                if last_direction == 'CW':
+                    position -= 1  # Ensure first detent is processed after switching to CCW
+                else:
+                    position -= 1
+                last_direction = 'CCW'
 
-    # Button Press (debounce)
-    if GPIO.input(SW) == GPIO.LOW:
-        await asyncio.sleep(0.1)
+            # Ensure one print per detent by dividing by 2
+            new_position = position // 2  
+
+            if new_position != old_position:
+                if new_position > old_position:
+                    await client.write_gatt_char(CHARACTERISTIC_UUID, b'C', response=True)
+                    print("C")
+                else:
+                    await client.write_gatt_char(CHARACTERISTIC_UUID, b'A', response=True)
+                    print("A")
+
+                old_position = new_position
+            last_clk_state = clk_state
+
+    # Debounce Button
+    if sw_state == GPIO.LOW:
+        await asyncio.sleep(button_debounce_time)
         if GPIO.input(SW) == GPIO.LOW:
             await client.write_gatt_char(CHARACTERISTIC_UUID, b'P', response=True)
-            print("P", end="", flush=True)
-            time.sleep(0.2)
+            print("P")
+            time.sleep(0.1)  # Additional debounce for button press
+
 
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(CLK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(DT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(SW, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
 
 if __name__ == "__main__":
     setup_gpio()
