@@ -3,10 +3,11 @@ from bleak import BleakClient, BleakScanner, BleakError
 import asyncio
 import time
 
-# GPIO Pins for Encoder
+# GPIO Pins
 CLK = 4
 DT = 17
-SW = 22
+SW = 22  # Existing button
+NEW_BUTTON = 27  # New button for "L"
 
 # UUIDs for BLE Service and Characteristic
 SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
@@ -20,8 +21,8 @@ last_clk_state = 0
 last_direction = None  # Track last direction
 
 # Debounce timing
-encoder_debounce_time = 0.005  # 5 ms debounce for encoder
-button_debounce_time = 0.1  # 100 ms debounce for button
+encoder_debounce_time = 0.002  # 2 ms debounce for encoder
+button_debounce_time = 0.1  # 100 ms debounce for buttons
 
 
 async def connect_to_m5dial():
@@ -40,7 +41,7 @@ async def connect_to_m5dial():
                     old_position = position
 
                     while True:
-                        await handle_encoder(client)
+                        await handle_inputs(client)
                         await asyncio.sleep(0.001)
 
         except BleakError as e:
@@ -48,12 +49,13 @@ async def connect_to_m5dial():
             await asyncio.sleep(5)
 
 
-async def handle_encoder(client):
+async def handle_inputs(client):
     global last_clk_state, position, old_position, last_direction
 
     clk_state = GPIO.input(CLK)
     dt_state = GPIO.input(DT)
     sw_state = GPIO.input(SW)
+    new_button_state = GPIO.input(NEW_BUTTON)
 
     # Debounce Encoder
     if clk_state != last_clk_state:
@@ -88,7 +90,7 @@ async def handle_encoder(client):
                 old_position = new_position
             last_clk_state = clk_state
 
-    # Debounce Button
+    # Debounce Existing Button
     if sw_state == GPIO.LOW:
         await asyncio.sleep(button_debounce_time)
         if GPIO.input(SW) == GPIO.LOW:
@@ -96,12 +98,21 @@ async def handle_encoder(client):
             print("P")
             time.sleep(0.1)  # Additional debounce for button press
 
+    # Debounce New Button
+    if new_button_state == GPIO.LOW:
+        await asyncio.sleep(button_debounce_time)
+        if GPIO.input(NEW_BUTTON) == GPIO.LOW:
+            await client.write_gatt_char(CHARACTERISTIC_UUID, b'L', response=True)
+            print("L")
+            time.sleep(0.1)  # Additional debounce for new button press
+
 
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(CLK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(DT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(SW, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(NEW_BUTTON, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Setup new button
 
 
 if __name__ == "__main__":
