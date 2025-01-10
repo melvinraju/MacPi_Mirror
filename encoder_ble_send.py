@@ -7,7 +7,7 @@ import time
 CLK = 4
 DT = 17
 SW = 22  # Existing button
-NEW_BUTTON = 27  # New button for "L"
+NEW_BUTTON = 23  # New button for "L"
 
 # UUIDs for BLE Service and Characteristic
 SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
@@ -22,7 +22,7 @@ last_direction = None  # Track last direction
 
 # Debounce timing
 encoder_debounce_time = 0.002  # 2 ms debounce for encoder
-button_debounce_time = 0.1  # 100 ms debounce for buttons
+button_debounce_time = 0.05  # 100 ms debounce for buttons
 
 
 async def connect_to_m5dial():
