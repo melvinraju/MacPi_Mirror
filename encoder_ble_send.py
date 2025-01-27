@@ -6,8 +6,9 @@ import time
 # GPIO Pins
 CLK = 4
 DT = 17
-L_BUTTON = 23  # L_Button
-O_BUTTON = 24  # O_Button
+ENCODER_BUTTON = 22  # Encoder button (sends "P")
+L_BUTTON = 23        # L_Button (sends "L")
+O_BUTTON = 24        # O_Button (sends "O")
 
 # UUIDs for BLE Service and Characteristic
 SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
@@ -22,7 +23,7 @@ last_direction = None  # Track last direction
 
 # Debounce timing
 encoder_debounce_time = 0.002  # 2 ms debounce for encoder
-button_debounce_time = 0.05  # 50 ms debounce for buttons
+button_debounce_time = 0.05   # 50 ms debounce for buttons
 
 
 async def connect_to_m5dial():
@@ -57,6 +58,7 @@ async def handle_inputs(client):
 
     clk_state = GPIO.input(CLK)
     dt_state = GPIO.input(DT)
+    encoder_button_state = GPIO.input(ENCODER_BUTTON)
     l_button_state = GPIO.input(L_BUTTON)
     o_button_state = GPIO.input(O_BUTTON)
 
@@ -93,7 +95,15 @@ async def handle_inputs(client):
                 old_position = new_position
             last_clk_state = clk_state
 
-    # Debounce L_Button
+    # Debounce Encoder Button (P)
+    if encoder_button_state == GPIO.LOW:
+        await asyncio.sleep(button_debounce_time)
+        if GPIO.input(ENCODER_BUTTON) == GPIO.LOW:
+            await client.write_gatt_char(CHARACTERISTIC_UUID, b'P', response=True)
+            print("P")
+            time.sleep(0.05)  # Additional debounce for encoder button
+
+    # Debounce L_Button (L)
     if l_button_state == GPIO.LOW:
         await asyncio.sleep(button_debounce_time)
         if GPIO.input(L_BUTTON) == GPIO.LOW:
@@ -101,7 +111,7 @@ async def handle_inputs(client):
             print("L")
             time.sleep(0.05)  # Additional debounce for L_Button
 
-    # Debounce O_Button
+    # Debounce O_Button (O)
     if o_button_state == GPIO.LOW:
         await asyncio.sleep(button_debounce_time)
         if GPIO.input(O_BUTTON) == GPIO.LOW:
@@ -114,6 +124,7 @@ def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(CLK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(DT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(ENCODER_BUTTON, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Setup encoder button
     GPIO.setup(L_BUTTON, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Setup L_Button
     GPIO.setup(O_BUTTON, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Setup O_Button
 
