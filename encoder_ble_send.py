@@ -6,8 +6,8 @@ import time
 # GPIO Pins
 CLK = 4
 DT = 17
-SW = 22  # Existing button
-NEW_BUTTON = 23  # New button for "L"
+L_BUTTON = 23  # L_Button
+O_BUTTON = 24  # O_Button
 
 # UUIDs for BLE Service and Characteristic
 SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
@@ -22,7 +22,7 @@ last_direction = None  # Track last direction
 
 # Debounce timing
 encoder_debounce_time = 0.002  # 2 ms debounce for encoder
-button_debounce_time = 0.05  # 100 ms debounce for buttons
+button_debounce_time = 0.05  # 50 ms debounce for buttons
 
 
 async def connect_to_m5dial():
@@ -44,9 +44,12 @@ async def connect_to_m5dial():
                         await handle_inputs(client)
                         await asyncio.sleep(0.001)
 
+        except asyncio.TimeoutError:
+            print(f"Connection attempt to {DEVICE_NAME} timed out. Retrying in 2 seconds...")
+            await asyncio.sleep(2)
         except BleakError as e:
-            print(f"Connection failed: {e}. Retrying in 5 seconds...")
-            await asyncio.sleep(5)
+            print(f"BLE error: {e}. Retrying in 2 seconds...")
+            await asyncio.sleep(2)
 
 
 async def handle_inputs(client):
@@ -54,8 +57,8 @@ async def handle_inputs(client):
 
     clk_state = GPIO.input(CLK)
     dt_state = GPIO.input(DT)
-    sw_state = GPIO.input(SW)
-    new_button_state = GPIO.input(NEW_BUTTON)
+    l_button_state = GPIO.input(L_BUTTON)
+    o_button_state = GPIO.input(O_BUTTON)
 
     # Debounce Encoder
     if clk_state != last_clk_state:
@@ -90,29 +93,29 @@ async def handle_inputs(client):
                 old_position = new_position
             last_clk_state = clk_state
 
-    # Debounce Existing Button
-    if sw_state == GPIO.LOW:
+    # Debounce L_Button
+    if l_button_state == GPIO.LOW:
         await asyncio.sleep(button_debounce_time)
-        if GPIO.input(SW) == GPIO.LOW:
-            await client.write_gatt_char(CHARACTERISTIC_UUID, b'P', response=True)
-            print("P")
-            time.sleep(0.1)  # Additional debounce for button press
-
-    # Debounce New Button
-    if new_button_state == GPIO.LOW:
-        await asyncio.sleep(button_debounce_time)
-        if GPIO.input(NEW_BUTTON) == GPIO.LOW:
+        if GPIO.input(L_BUTTON) == GPIO.LOW:
             await client.write_gatt_char(CHARACTERISTIC_UUID, b'L', response=True)
             print("L")
-            time.sleep(0.1)  # Additional debounce for new button press
+            time.sleep(0.05)  # Additional debounce for L_Button
+
+    # Debounce O_Button
+    if o_button_state == GPIO.LOW:
+        await asyncio.sleep(button_debounce_time)
+        if GPIO.input(O_BUTTON) == GPIO.LOW:
+            await client.write_gatt_char(CHARACTERISTIC_UUID, b'O', response=True)
+            print("O")
+            time.sleep(0.05)  # Additional debounce for O_Button
 
 
 def setup_gpio():
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(CLK, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(DT, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.setup(SW, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.setup(NEW_BUTTON, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Setup new button
+    GPIO.setup(L_BUTTON, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Setup L_Button
+    GPIO.setup(O_BUTTON, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Setup O_Button
 
 
 if __name__ == "__main__":
