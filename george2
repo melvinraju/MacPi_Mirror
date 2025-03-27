@@ -1,0 +1,189 @@
+#!/usr/bin/python3
+import socket
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
+import os
+import subprocess
+import zlib
+import time
+import ST7735
+
+# === DISPLAY SETUP FUNCTIONS ===
+def init_display():
+    """
+    Initialize the 0.96" 160x80 ST7735 display.
+    Adjust the port, cs, dc, backlight, and rotation as needed.
+    """
+    disp = ST7735.ST7735(
+        port=0,
+        cs=0,          # Chip select (adjust to your wiring)
+        dc=24,         # Data/Command pin (adjust to your wiring)
+        backlight=18,  # Backlight pin (adjust to your wiring)
+        width=160,
+        height=80,
+        rotation=0,    # Change rotation if needed (0, 90, 180, 270)
+        spi_speed_hz=40000000
+    )
+    disp.begin()
+    return disp
+
+def clear_display(display):
+    """
+    Clear the display by filling it with black.
+    """
+    # The ST7735 library provides a clear() method that fills the screen with black.
+    display.clear()
+
+def set_backlight(display, brightness):
+    """
+    Set the backlight brightness.
+    The ST7735 library may not support variable brightness directly.
+    If it does, use its method (here we assume a set_backlight method exists).
+    Otherwise, you can implement PWM control separately.
+    """
+    try:
+        display.set_backlight(brightness)
+    except AttributeError:
+        # If the library does not support brightness control, do nothing.
+        pass
+
+def show_image(display, image):
+    """
+    Display a PIL Image on the ST7735 screen.
+    The display() method handles any necessary image conversion.
+    """
+    display.display(image)
+
+# Initialize display and backlight
+disp = init_display()
+clear_display(disp)
+set_backlight(disp, 100)
+
+# === NETWORK CONFIGURATION ===
+HOST = "0.0.0.0"
+PORT = 5000
+
+# Get the Pi's hostname
+hostname = os.uname()[1]
+
+def get_wifi_ssid():
+    """Retrieve the Wi-Fi SSID or return 'Not connected' if unavailable."""
+    try:
+        ssid = subprocess.check_output(["iwgetid", "-r"], stderr=subprocess.DEVNULL)
+        ssid = ssid.decode("utf-8").strip()
+        return f"WiFi: {ssid}" if ssid else "WiFi: Not connected"
+    except subprocess.CalledProcessError:
+        return "WiFi: Not connected"
+
+def display_waiting_message():
+    """
+    Display the hostname, Wi-Fi status, and waiting message on the screen.
+    The text is centered based on the display's dimensions.
+    """
+    image = Image.new("RGB", (disp.width, disp.height), "black")
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.load_default()
+    ssid_info = get_wifi_ssid()
+
+    # Prepare the message
+    message = f"{hostname}\n{ssid_info}\nWaiting for stream..."
+
+    # Calculate bounding box to center the text
+    bbox = draw.multiline_textbbox((0, 0), message, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+
+    draw.multiline_text(
+        ((disp.width - text_width) // 2, (disp.height - text_height) // 2),
+        message,
+        fill="white",
+        font=font,
+        align="center",
+    )
+
+    show_image(disp, image)
+
+def receive_image(conn):
+    """
+    Receive and decompress an image over the socket connection.
+    Returns:
+      - True if a valid image was received and displayed.
+      - None if the frame was invalid but the connection remains open.
+      - False if the client disconnected or a critical error occurred.
+    """
+    try:
+        # Read 8 bytes for the size
+        size_data = conn.recv(8)
+        if not size_data or len(size_data) < 8:
+            print("No data received. Client may have disconnected.")
+            return None, False
+
+        image_size = int.from_bytes(size_data, byteorder="big")
+        print(f"Receiving compressed image of size: {image_size} bytes.")
+
+        # Read the full compressed image
+        received_data = b""
+        while len(received_data) < image_size:
+            chunk = conn.recv(min(4096, image_size - len(received_data)))
+            if not chunk:
+                print("Connection lost during image reception.")
+                return None, False
+            received_data += chunk
+
+        if len(received_data) != image_size:
+            print(f"Expected {image_size} bytes, got {len(received_data)} bytes.")
+            return None, True  # Skip this frame but keep connection alive
+
+        # Decompress the image and display it
+        decompressed_data = zlib.decompress(received_data)
+        image = Image.open(BytesIO(decompressed_data))
+        show_image(disp, image)
+
+        return True, True
+
+    except Exception as e:
+        print(f"Error receiving image: {e}")
+        return None, False
+
+# === MAIN LOOP ===
+while True:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+            # Allow re-binding the port after a disconnect
+            server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            server.bind((HOST, PORT))
+            server.listen(1)
+
+            print(f"{hostname} - {get_wifi_ssid()} - Waiting for stream...")
+
+            # Outer loop to update the "waiting" screen
+            while True:
+                display_waiting_message()
+                time.sleep(2)
+
+                # Use a 1-second timeout for non-blocking accept
+                server.settimeout(1)
+                try:
+                    conn, addr = server.accept()
+                except socket.timeout:
+                    continue
+
+                print(f"Connection from {addr}")
+
+                with conn:
+                    # Receive frames until client disconnects
+                    while True:
+                        frame_result, keep_alive = receive_image(conn)
+                        if not keep_alive:
+                            print("Client disconnected. Returning to waiting screen...")
+                            break
+                        if frame_result is None:
+                            # Skip this frame and continue listening
+                            continue
+
+                print("Waiting for next connection...")
+
+    except Exception as e:
+        print(f"Server error: {e}")
+        # Delay before restarting the server loop
+        time.sleep(5)
