@@ -4,28 +4,26 @@ import argparse
 from mss import mss
 from PIL import Image
 from io import BytesIO
+import zlib
 
 
 def send_image(client, image, quality, rotation, target_width, target_height):
-    """Resize, rotate, and send an image to the Pi over the socket."""
-    image = image.resize((target_width, target_height), Image.LANCZOS).rotate(rotation)
+    image = image.rotate(rotation, expand=True)
+    image = image.resize((target_width, target_height), Image.LANCZOS)
 
     buffer = BytesIO()
     image.save(buffer, format="JPEG", quality=quality, optimize=True, subsampling=0)
     buffer.seek(0)
 
     image_data = buffer.read()
-    image_size = len(image_data)
+    compressed_data = zlib.compress(image_data)
 
-    # Send the image size (8 bytes)
+    image_size = len(compressed_data)
     client.sendall(image_size.to_bytes(8, byteorder="big"))
-
-    # Send the image data in one batch
-    client.sendall(image_data)
+    client.sendall(compressed_data)
 
 
 def resolve_hostname(hostname):
-    """Resolve hostname to IP address."""
     try:
         return socket.gethostbyname(f"{hostname}.local")
     except socket.gaierror:
@@ -33,8 +31,16 @@ def resolve_hostname(hostname):
         return None
 
 
+def send_keep_alive(client):
+    """Send a lightweight keep-alive packet to keep the connection active."""
+    empty_frame = zlib.compress(b"")
+    client.sendall(len(empty_frame).to_bytes(8, byteorder="big"))
+    client.sendall(empty_frame)
+    print("Sent keep-alive frame.")
+
+
 def main(hostname, port, region, framerate, quality, rotation, target_width, target_height):
-    delay = 1 / framerate  # Convert framerate to delay between frames
+    delay = 1 / framerate
     host = resolve_hostname(hostname)
 
     if not host:
@@ -43,24 +49,28 @@ def main(hostname, port, region, framerate, quality, rotation, target_width, tar
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
-            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # Low latency
+            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # Disable Nagle's Algorithm
+            client.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)  # Set buffer to 64KB
             client.connect((host, port))
             print(f"Connected to {hostname} ({host}):{port}")
 
             with mss() as sct:
+                last_send_time = time.time()
                 while True:
-                    # Capture the screen and convert to PIL Image
                     screenshot = sct.grab(region)
                     image = Image.frombytes("RGB", screenshot.size, screenshot.rgb)
-
-                    # Send the image to the Pi
                     try:
                         send_image(client, image, quality, rotation, target_width, target_height)
+                        last_send_time = time.time()
                     except (BrokenPipeError, ConnectionResetError):
                         print("Connection lost. Exiting...")
                         break
 
-                    time.sleep(delay)  # Adjust for framerate
+                    # Send keep-alive frame if no data is sent for 1 second
+                    if time.time() - last_send_time > 1:
+                        send_keep_alive(client)
+
+                    time.sleep(delay)
     except ConnectionRefusedError:
         print(f"Could not connect to {hostname}:{port}")
 
