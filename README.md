@@ -153,7 +153,7 @@ nano ~/.config/autostart/start_screen_stream.desktop
 [Desktop Entry]
 Type=Application
 Name=Start Screen Stream
-Exec=lxterminal -e "bash -c 'sleep 5; python3 /home/tiramisu/Desktop/MacPi_Mirror-main/screen_stream.py'"
+Exec=lxterminal -e "bash -c 'sleep 5; python3 /home/elderflowe/Desktop/MacPi_Mirror-main/screen_stream.py'"
 X-GNOME-Autostart-enabled=true
 Comment=Delays 5 seconds, then runs screen_stream.py
 ```
