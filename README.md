@@ -39,11 +39,13 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 
 
 #### **Pi Software**
-1. **Raspberry Pi Hostname**:
+1. **Save the Repo Folder Locally**:
+   - Save the MacPi Mirror repo folder in your desired location (the folder must contain `screen_stream.py` and the folder `lib`). Note down the file path.
+2. **Raspberry Pi Hostname**:
 
    The scripts find your Pi's IP address by pinging its hostname, by default this is `raspberrypi`. If you have multiple Pis on your network, ensure your Raspberry Pi has a unique hostname, or the script may not stream to the correct Pi.
 
-2. **Enable & Install Required Libraries**:
+3. **Enable & Install Required Libraries**:
    Some of the following libraries may already be installed on Pi.
    <details>
      <Summary>SPI</Summary>
@@ -85,9 +87,6 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
    ```
    </details>
 
-
-3. **Save the Repo Folder Locally**:
-   - Save the MacPi Mirror repo folder in your desired location (the folder must contain `screen_stream.py` and the folder `lib`). Note down the file path.
 
 4. **Manufacturer’s Display Library**:
    - In the `screen_stream.py` script, adjust the code on lines 9 & 13 to point towards the library with the correct size display (eg. `LCD_1inch54`). Look for available sizes in the `lib` folder.
@@ -135,20 +134,16 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 
 
 ### **Mac Setup (10 mins)**
-
-1. **Install Required Libraries**:
+1. **Save the Repo Folder Locally**:
+   - Save the MacPi Mirror repo folder in your desired location (the folder must contain `screen_capture.py`). Note down the file path.
+2. **Install Required Libraries**:
 
     Open terminal on mac and enter the following command:
      ```bash
      pip3 install pillow mss
      ```
-     
-3. **Save the Repo Folder Locally**:
-   - Save the MacPi Mirror repo folder in your desired location (the folder must contain `screen_capture.py`). Note down the file path.
-
-
-4. Open a terminal on the Mac and navigate to the location of the `screen_capture.py` script.
-5. Adjust the following script with the configuration guide below and run in terminal:
+3. Open a terminal on the Mac and navigate to the location of the `screen_capture.py` script.
+4. Adjust the following script with the configuration guide below and run in terminal:
    ```bash
    python3 screen_capture.py --host raspberrypi  --top 120 --left 1480 --width 242 --height 242 --target-width 240 --target-height 240 --framerate 100 --quality 100 --rotation 0
    ```
