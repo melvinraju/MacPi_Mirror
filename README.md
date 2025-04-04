@@ -14,7 +14,7 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 ---
 
 
-### **1. Pi Setup (20 mins)** 
+### **Pi Setup (20 mins)** 
 #### **Pi Hardware**
 1. **Connect the LCD to the Raspberry Pi**:
    <details>
@@ -102,10 +102,39 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
    
    The screen will display the Raspberry Pi's hostname and "Waitng for connection..." if successful
 
+
+   <details>
+    <summary>Optional: Make script start in terminal on boot (10 mins)</summary>
+    
+    
+    1. Create the autostart directory if it doesn’t exist:
+    ```
+    mkdir -p ~/.config/autostart
+    ```
+    
+    2. Create file using nano:
+    ```
+    nano ~/.config/autostart/start_screen_stream.desktop
+    ```
+    3. Add the following content, edit the file path if required. Save and exit:
+    ```
+    [Desktop Entry]
+    Type=Application
+    Name=Start Screen Stream
+    Exec=lxterminal -e "bash -c 'sleep 5; python3 /home/raspberrypi/Desktop/MacPi_Mirror-main/screen_stream.py'"
+    X-GNOME-Autostart-enabled=true
+    Comment=Delays 5 seconds, then runs screen_stream.py
+    ```
+    4. Reboot. Terminal will open and run the script after 5 seconds
+  
+    
+     </details>
+
+
 ---
 
 
-### **3. Mac Setup (10 mins)**
+### **Mac Setup (10 mins)**
 
 1. **Install Required Libraries**:
 
@@ -134,27 +163,7 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 
 The selected portion of the Mac’s screen will be mirrored on the Pi’s LCD.
 
-### **4. Make script start in terminal on boot (10 mins)**
 
-1. Create the autostart directory if it doesn’t exist:
-```
-mkdir -p ~/.config/autostart
-```
-
-2. Create file using nano:
-```
-nano ~/.config/autostart/start_screen_stream.desktop
-```
-3. Add the following content, edit the file path if required. Save and exit:
-```
-[Desktop Entry]
-Type=Application
-Name=Start Screen Stream
-Exec=lxterminal -e "bash -c 'sleep 5; python3 /home/raspberrypi/Desktop/MacPi_Mirror-main/screen_stream.py'"
-X-GNOME-Autostart-enabled=true
-Comment=Delays 5 seconds, then runs screen_stream.py
-```
-4. Reboot. Terminal will open and run the script after 5 seconds
 
 
 
