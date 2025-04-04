@@ -19,19 +19,20 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 
 1. **Connect the LCD to the Raspberry Pi**:
    <details>
-    <summary>ST7789 LCD 1.54" display pins</summary>
+    <summary>SPI display pinout</summary>
 
    | LCD Pin   | Raspberry Pi Pin |
    |-----------|------------------|
    | VCC       | 5V               |
    | GND       | GND              |
-   | DIN       | GPIO 19 (MOSI)   |
-   | CLK       | GPIO 23 (SCLK)   |
+   | DIN/MOSI  | GPIO 19 (MOSI)   |
+   | CLK/SCK   | GPIO 23 (SCLK)   |
    | CS        | GPIO 24 (CE0)    |
    | DS/DC     | GPIO 25          |
-   | RST       | GPIO 27          |
+   | RST (optional)       | GPIO 27          |
    | BL        | GPIO 18          |
   
+
    </details>
 
 2. Power up the Raspberry Pi and ensure it is connected to the same network as the Mac.
@@ -124,7 +125,7 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 4. Open a terminal on the Mac and navigate to the location of the `screen_capture.py` script.
 5. Run the script:
    ```bash
-   python3 screen_capture.py --host elderflower  --top 120 --left 1480 --width 242 --height 242 --target-width 240 --target-height 240 --framerate 100 --quality 100 --rotation 0
+   python3 screen_capture.py --host raspberrypi  --top 120 --left 1480 --width 242 --height 242 --target-width 240 --target-height 240 --framerate 100 --quality 100 --rotation 0
    ```
    Configuration:
    - `host` is your Raspberry Pi's hostname
@@ -153,7 +154,7 @@ nano ~/.config/autostart/start_screen_stream.desktop
 [Desktop Entry]
 Type=Application
 Name=Start Screen Stream
-Exec=lxterminal -e "bash -c 'sleep 5; python3 /home/elderflowe/Desktop/MacPi_Mirror-main/screen_stream.py'"
+Exec=lxterminal -e "bash -c 'sleep 5; python3 /home/raspberrypi/Desktop/MacPi_Mirror-main/screen_stream.py'"
 X-GNOME-Autostart-enabled=true
 Comment=Delays 5 seconds, then runs screen_stream.py
 ```
