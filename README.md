@@ -148,10 +148,11 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 
 
 4. Open a terminal on the Mac and navigate to the location of the `screen_capture.py` script.
-5. Run the script:
+5. Run the folowing script - Replace `raspberrypi` with the name of your pi.:
    ```bash
    python3 screen_capture.py --host raspberrypi  --top 120 --left 1480 --width 242 --height 242 --target-width 240 --target-height 240 --framerate 100 --quality 100 --rotation 0
    ```
+   
    Configuration:
    - `host` is your Raspberry Pi's hostname
    - `top` and `left` define the origin of the capture region in pixels
