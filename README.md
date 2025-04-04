@@ -3,14 +3,13 @@
 MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspberry Pi receives the data and displays it on a LCD.
 
 - **Hardware**:
-  - Raspberry Pi (any model with GPIO and networking capabilities).
-  - ST7789 LCD.
+  - Raspberry Pi.
+  - An SPI LCD.
   - A reliable network connection (Wi-Fi or Ethernet).
 
 - **Software**:
   - Raspberry Pi OS (Raspbian) with Python 3 installed.
   - macOS with Python 3 installed.
-  - The scripts use the **Pillow**, **mss**, and **sockets** libraries for capturing, compressing, and transmitting images.
 
 ---
 
