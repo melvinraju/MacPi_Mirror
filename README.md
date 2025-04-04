@@ -14,8 +14,8 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 ---
 
 
-### **1. Pi Hardware Setup (10 mins)** 
-
+### **1. Pi Setup (20 mins)** 
+#### **Pi Hardware**
 1. **Connect the LCD to the Raspberry Pi**:
    <details>
     <summary>SPI display pinout</summary>
@@ -36,12 +36,9 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 
 2. Power up the Raspberry Pi and ensure it is connected to the same network as the Mac.
 
----
 
 
-### **2. Pi Software Setup (10 mins)**
-
-#### **On the Raspberry Pi**
+#### **Pi Software**
 1. **Raspberry Pi Hostname**:
 
    The scripts find your Pi's IP address by pinging its hostname, by default this is `raspberrypi`. If you have multiple Pis on your network, ensure your Raspberry Pi has a unique hostname, or the script may not stream to the correct Pi.
@@ -108,7 +105,7 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
 ---
 
 
-### **3. Mac Software Setup (10 mins)**
+### **3. Mac Setup (10 mins)**
 
 1. **Install Required Libraries**:
 
