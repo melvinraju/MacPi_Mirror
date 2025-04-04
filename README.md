@@ -93,7 +93,7 @@ MacPi Mirror captures your Mac screen and sends it to a Raspberry Pi. The Raspbe
    - Save the MacPi Mirror repo folder in your desired location (the folder must contain `screen_stream.py` and the folder `lib`). Note down the file path.
 
 4. **Manufacturer’s Display Library**:
-   - In the `screen_stream.py` script, the line `from lib import LCD_1inch54` points towards the 1.54 inch display library, this can be changed to another display size. Look for whats available in the `lib` folder and edit the imprt `LCD_1inch54` value.
+   - In the `screen_stream.py` script, adjust the code on lines 9 & 13 to point towards the library with the correct size display (eg. `LCD_1inch54`). Look for available sizes in the `lib` folder.
 
 
 5. Open a terminal on the Pi and navigate to the location of the `screen_stream.py` script.
